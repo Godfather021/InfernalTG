@@ -4,7 +4,9 @@ package.cpath = package.cpath .. ';.luarocks/lib/lua/5.2/?.so'
 
 require("./bot/utils")
 
-VERSION = '1.0'
+local f = assert(io.popen('/usr/bin/git describe --tags', 'r'))
+VERSION = assert(f:read('*a'))
+f:close()
 
 -- This function is called when tg receive a msg
 function on_msg_receive (msg)
@@ -12,16 +14,17 @@ function on_msg_receive (msg)
     return
   end
 
-  local receiver = get_receiver(msg)
-  print (receiver)
+  msg = backward_msg_format(msg)
 
-  --vardump(msg)
+  local receiver = get_receiver(msg)
+
+  -- vardump(msg)
   msg = pre_process_service_msg(msg)
   if msg_valid(msg) then
     msg = pre_process_msg(msg)
     if msg then
       match_plugins(msg)
-  --   mark_read(receiver, ok_cb, false)
+      mark_read(receiver, ok_cb, false)
     end
   end
 end
@@ -32,6 +35,7 @@ end
 function on_binlog_replay_end()
   started = true
   postpone (cron_plugins, false, 60*5.0)
+  -- See plugins/isup.lua as an example for cron
 
   _config = load_config()
 
@@ -79,9 +83,8 @@ function msg_valid(msg)
   end
 
   if msg.from.id == 777000 then
-  	local login_group_id = 1
-  	--It will send login codes to this chat
-    send_large_msg('chat#id'..login_group_id, msg.text)
+    print('\27[36mNot valid: Telegram message\27[39m')
+    return false
   end
 
   return true
@@ -204,163 +207,34 @@ function create_config( )
   -- A simple config with basic plugins and ourselves as privileged user
   config = {
     enabled_plugins = {
-     "Help_All",
-    "Auto_Leave",
-    "BLOCK",
-    "Feedback",
-    "Member_Manager",
-    "Group_Manager",
-    "S2A",
-    "SUDO",
-    "all",
-    "arabic_lock",
-    "banhammer",
-    "download_media",
-    "get",
-    "inpm",
-    "invite",
-    "leaders",
-    "leave_ban",
-    "plugins",
-    "realmcommands",
-    "service_entergroup",
-    "set",
-    "anti_spam",
-    "stats",
-    "Version",
-    "close_group",
-    "kickall",
-    "Maseage",
-    "tagall",
-    
-    },
-    sudo_users = {109722284,99743635,171604508},--Sudo users
-    disabled_channels = {},
-    moderation = {data = 'data/moderation.json'},
-    about_text = [[infernalTG  v2 - Open Source
-An advance Administration bot based on yagop/telegram-bot 
- 
- our official github :
- https://github.com/INFERNALTEAM/InfernalTG.git
-Antispambot : @InfernalTG
-website ; https://arash-infernal.epage.ir
-Admins
-@Creed_is_dead [Founder]
-@digitalboys [Developer]
-@Arashinfernal [Developer]
-@MustafFlux [Manager]
-
-Special thanks to
-Imandaneshi
-thisisarman
-yago perez ...
-and more ...
-
-Our channels
-@Infernalteamch [English]
-@infernalchannel [persian]
-@Infernalteam [persian]
-]],
-    help_text_realm = [[
-group admin Commands:
-
-!creategroup [Name]
-
-!createrealm [Name]
-
-!setname [Name]
-
-!setabout [GroupID] [Text]
-
-!setrules [GroupID] [Text]
-
-!lock [GroupID] [setting]
-
-!unlock [GroupID] [setting]
-
-!wholist
-
-!who
-
-!type
-
-!kill chat [GroupID]
-
-
-!kill realm [RealmID]
-
-!adminprom [id|username]
-
-!admindem [id|username]
-
-!list infernalgroups
-
-!list infernalrealms
-
-!log
-
-!broadcast [text]
-!broadcast InfernalTG !
-
-!br [group_id] [text]
-!br 123456789 Hello !
-
-
-**U can use both "/" and "!" 
-
-
-*Only admins and sudo can add bots in group
-
-
-*Only admins and sudo can use kick,ban,unban,newlink,setphoto,setname,lock,unlock,set rules,set about and settings commands
-
-*Only admins and sudo can use res, setowner, commands
-]],
-    help_text = [[
-tools for InfernalTG :
-
->#1.Add_bot
->#2.Anti_Bot
->#3.Auto_Leave
->#4.BLOCK
->#5.Feedback
->#6.Member_Manager
->#7.S2A
->#8.SUDO
->#8.all
->#9.arabic_lock
->#10.banhammer
->#11.down_media
->#12.get
->#13.inpm
->#14.invite
->#15.leaders
->#16.leave_ban
->#17.pluglist
->#18.realmcommands
->#19.service_entergroup
->#20.set
->#21.anti_spam
->#22.stats
->#23.toengsupport
->#24.topersupport
->#25.spammer_a
->#26.Spammer_i
->#27.Version
->#28.close_group
->#29.kickall
->#30.SendPm
->#31.tagall
->#32.share
-help all plugin soon :D ,"
-You Can Get Bot version by sending !version,"
-Master admin : @ArashInfernal ,"
-our channel : @INFERNALTEAMCH ,"
-
-]]
+      "9gag",
+      "eur",
+      "echo",
+      "btc",
+      "get",
+      "giphy",
+      "google",
+      "gps",
+      "help",
+      "id",
+      "images",
+      "img_google",
+      "location",
+      "media",
+      "plugins",
+      "channels",
+      "set",
+      "stats",
+      "time",
+      "version",
+      "weather",
+      "xkcd",
+      "youtube" },
+    sudo_users = {128556958},
+    disabled_channels = {}
   }
   serialize_to_file(config, './data/config.lua')
-  print('saved config into ./data/config.lua')
+  print ('saved config into ./data/config.lua')
 end
 
 function on_our_id (id)
@@ -372,7 +246,7 @@ function on_user_update (user, what)
 end
 
 function on_chat_update (chat, what)
-
+  --vardump (chat)
 end
 
 function on_secret_chat_update (schat, what)
@@ -435,8 +309,8 @@ function cron_plugins()
     end
   end
 
-  -- Called again in 2 mins
-  postpone (cron_plugins, false, 120)
+  -- Called again in 5 mins
+  postpone (cron_plugins, false, 5*60.0)
 end
 
 -- Start and load values
